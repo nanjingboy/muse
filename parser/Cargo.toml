@@ -1,0 +1,10 @@
+[package]
+name = "muse-parser"
+version = "0.1.0"
+authors = ["Tom.Huang <hzlhu.dargon@gmail.com>"]
+edition = "2021"
+repository = "https://github.com/nanjingboy/muse"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

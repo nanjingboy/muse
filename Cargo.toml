@@ -1,0 +1,11 @@
+[profile.release]
+panic = "abort"
+lto = true
+
+[workspace]
+members = [
+  "./parser",
+  "./traverse",
+  "./types",
+  "./generator",
+]
