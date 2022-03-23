@@ -1,3 +1,3 @@
 # muse
 
-A JavaScript Parser written by Rust.
+A  JavaScript Parser inspired by babel written by Rust.
