@@ -1,0 +1,26 @@
+{
+  "name": "muse",
+  "version": "0.1.0",
+  "description": "A JavaScript Parser inspired by babel written by Rust.",
+  "repository": "git@github.com:nanjingboy/muse.git",
+  "author": "Tom.Huang <hzlhu.dargon@gmail.com>",
+  "scripts": {
+    "test": "cargo test",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.rs": [
+      "cargo fmt --"
+    ],
+    "*.toml": [
+      "taplo format"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^16.2.3",
+    "@commitlint/config-conventional": "^16.2.1",
+    "@taplo/cli": "^0.3.2",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.3.7"
+  }
+}
