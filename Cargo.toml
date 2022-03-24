@@ -4,8 +4,8 @@ lto = true
 
 [workspace]
 members = [
-  "./parser",
-  "./traverse",
-  "./types",
-  "./generator",
+  "./crates/parser",
+  "./crates/traverse",
+  "./crates/types",
+  "./crates/generator",
 ]
