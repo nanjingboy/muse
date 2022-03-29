@@ -1,8 +1,3 @@
-#[cfg(test)]
-use std::collections::HashMap;
-#[cfg(test)]
-use std::str::FromStr;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Attribute, DeriveInput, Expr, Lit, Meta, NestedMeta};
@@ -106,6 +101,11 @@ fn get_enum_name_and_items(ast: &DeriveInput) -> (Ident, Vec<EnumItem>) {
     };
     (ast.ident.clone(), items)
 }
+
+#[cfg(test)]
+use std::collections::HashMap;
+#[cfg(test)]
+use std::str::FromStr;
 
 #[test]
 fn test_int_enum_impl() {
