@@ -8,4 +8,5 @@ members = [
   "./crates/traverse",
   "./crates/types",
   "./crates/generator",
+  "./crates/macros",
 ]

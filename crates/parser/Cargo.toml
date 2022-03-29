@@ -11,3 +11,4 @@ repository = "https://github.com/nanjingboy/muse"
 strum = "0.24"
 strum_macros = "0.24"
 derivative = "2.2.0"
+muse-macros = { path = "../macros" }
