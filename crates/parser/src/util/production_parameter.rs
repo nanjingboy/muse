@@ -23,7 +23,7 @@ use muse_macros::IntEnum;
 /// 6. parse function bodyx`
 /// 7. exit current stack
 #[derive(Debug, Copy, Clone, PartialEq, Eq, IntEnum)]
-#[int_enum(i16)]
+#[int_enum(i32)]
 pub(crate) enum ParamKind {
     Param = 0b0000,       // Initial Parameter flags
     ParmYield = 0b0001,   // track [Yield] production parameter
