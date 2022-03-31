@@ -16,7 +16,7 @@ fn default_binop() -> i32 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct TokenType {
+pub(crate) struct TokenOptions {
     #[serde(default)]
     pub(crate) label: String,
     #[serde(default)]
@@ -39,7 +39,7 @@ pub(crate) struct TokenType {
     pub(crate) binop: i32,
 }
 
-impl TokenType {
+impl TokenOptions {
     pub(crate) fn new_from_json(value: &JsonValue) -> Self {
         serde_json::from_str(&value.to_string()).unwrap()
     }
@@ -48,7 +48,7 @@ impl TokenType {
 #[derive(Debug, Clone)]
 pub(crate) struct Token {
     pub(crate) index: i32,
-    pub(crate) value: TokenType,
+    pub(crate) options: TokenOptions,
 }
 
 #[derive(Debug, Clone)]
