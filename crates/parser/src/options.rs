@@ -1,7 +1,6 @@
 use std::{str::FromStr, string::ToString};
 
 use derivative::Derivative;
-use strum;
 use strum_macros::{Display, EnumString};
 
 #[derive(Debug, Eq, PartialEq, Display, EnumString)]
