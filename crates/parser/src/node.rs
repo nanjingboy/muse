@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::location::SourceLocation;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     pub node_type: String,
     pub start: i32,

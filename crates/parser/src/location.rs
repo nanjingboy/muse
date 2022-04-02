@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::whitespace::next_line_break;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct Position {
     pub line: i32,
     pub column: i32,
@@ -19,7 +21,7 @@ impl Position {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SourceLocation {
     pub start: Position,
     pub end: Position,

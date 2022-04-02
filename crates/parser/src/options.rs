@@ -1,14 +1,10 @@
-use std::{str::FromStr, string::ToString};
-
-use muse_macros::IntEnum;
+use muse_macros::{IntEnum, StrEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
-use strum_macros::{Display, EnumString};
 
 use crate::node::Node;
 
-#[derive(Debug, Clone, Eq, PartialEq, Display, EnumString, Serialize, Deserialize)]
-#[strum(serialize_all = "lowercase")]
+#[derive(Debug, Clone, Eq, PartialEq, StrEnum, Serialize, Deserialize)]
 pub enum SourceType {
     Script,
     Module,
