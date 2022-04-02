@@ -1,35 +1,62 @@
 use std::{str::FromStr, string::ToString};
 
-use derivative::Derivative;
+use muse_macros::IntEnum;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value as JsonValue};
 use strum_macros::{Display, EnumString};
 
-#[derive(Debug, Eq, PartialEq, Display, EnumString)]
+use crate::node::Node;
+
+#[derive(Debug, Clone, Eq, PartialEq, Display, EnumString, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
-pub(crate) enum SourceType {
+pub enum SourceType {
     Script,
     Module,
-    Unambiguous,
 }
 
-#[derive(Debug, Derivative)]
-#[derivative(Default)]
-pub(crate) struct Options {
-    #[derivative(Default(value = "SourceType::Script"))]
-    pub(crate) source_type: SourceType,
-    pub(crate) source_filename: Option<String>,
-    pub(crate) start_column: i32,
-    #[derivative(Default(value = "1"))]
-    pub(crate) start_line: i32,
-    pub(crate) allow_await_outside_function: bool,
-    pub(crate) allow_return_outside_function: bool,
-    pub(crate) allow_import_export_everywhere: bool,
-    pub(crate) allow_super_outside_method: bool,
-    pub(crate) allow_undeclared_exports: bool,
-    pub(crate) strict_mode: Option<bool>,
-    pub(crate) ranges: bool,
-    pub(crate) tokens: bool,
-    pub(crate) create_parenthesized_expressions: bool,
-    pub(crate) error_recovery: bool,
-    #[derivative(Default(value = "true"))]
-    pub(crate) attach_comment: bool,
+impl Default for SourceType {
+    fn default() -> Self {
+        SourceType::Script
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, IntEnum, Serialize, Deserialize)]
+#[int_enum(i32)]
+pub enum EcmaVersion {
+    Ecma3 = 3,
+    Ecma5 = 5,
+    Ecma2015 = 6,
+    Ecma2016 = 7,
+    Ecma2017 = 8,
+    Ecma2018 = 9,
+    Ecma2019 = 10,
+    Ecma2020 = 11,
+    Ecma2021 = 12,
+    Ecma2022 = 13,
+    Latest = 100000000,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Options {
+    pub ecma_version: EcmaVersion,
+    #[serde(default)]
+    pub source_type: SourceType,
+    pub allow_reserved: Option<bool>,
+    #[serde(default)]
+    pub allow_return_outside_function: bool,
+    #[serde(default)]
+    pub allow_import_export_everywhere: bool,
+    pub allow_await_outside_function: Option<bool>,
+    pub allow_super_outside_method: Option<bool>,
+    #[serde(default)]
+    pub allow_hash_bang: bool,
+    #[serde(default)]
+    pub locations: bool,
+    #[serde(default)]
+    pub ranges: bool,
+    pub program: Option<Node>,
+    pub source_file: Option<String>,
+    pub direct_source_file: Option<String>,
+    #[serde(default)]
+    pub preserve_parens: bool,
 }
