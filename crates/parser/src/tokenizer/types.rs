@@ -245,6 +245,6 @@ lazy_static! {
     };
 }
 
-pub fn get_token_types() -> TokenTypes {
-    (*TOKEN_TYPES).clone()
+pub fn get_token_types() -> &'static TokenTypes {
+    &(*TOKEN_TYPES)
 }

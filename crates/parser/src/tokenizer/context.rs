@@ -48,6 +48,6 @@ lazy_static! {
     };
 }
 
-pub fn get_token_context_types() -> TokenContextTypes {
-    (*TOKEN_CONTEXT_TYPES).clone()
+pub fn get_token_context_types() -> &'static TokenContextTypes {
+    &(*TOKEN_CONTEXT_TYPES)
 }
