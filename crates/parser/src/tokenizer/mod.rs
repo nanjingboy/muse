@@ -1,2 +1,2 @@
-pub(crate) mod context;
+pub mod context;
 pub mod types;
