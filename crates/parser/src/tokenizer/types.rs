@@ -28,7 +28,7 @@ impl TokenType {
     pub fn new(name: &str, config: &JsonValue) -> Result<Self, serde_json::error::Error> {
         let mut options = config.clone();
         options["label"] = json!(name);
-        serde_json::from_str(&options.to_string())
+        serde_json::from_value(options)
     }
 }
 
