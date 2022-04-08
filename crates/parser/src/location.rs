@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{parser::Parser, whitespace::next_line_break};
 
-#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Position {
     pub line: i32,
     pub column: i32,

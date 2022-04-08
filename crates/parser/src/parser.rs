@@ -4,6 +4,7 @@ use std::{
 };
 
 use fancy_regex::Regex;
+use muse_macros::StructRefCellSetter;
 use serde_json::json;
 
 use crate::{
@@ -48,7 +49,7 @@ fn get_reserved_words(version: &EcmaVersion, source_type: &SourceType) -> String
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, StructRefCellSetter)]
 pub struct Parser {
     pub options: Options,
     pub source_file: Option<String>,
@@ -58,27 +59,41 @@ pub struct Parser {
     pub reserved_words_strict_bind_regex: Regex,
     pub input: String,
     pub contains_esc: bool,
+    #[struct_ref_cell_setter(Copy)]
     pub cur_token_pos: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub cur_token_line_start: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub cur_token_line: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub cur_token_start: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub cur_token_end: RefCell<i32>,
     pub cur_token_start_loc: RefCell<Option<Position>>,
     pub cur_token_end_loc: RefCell<Option<Position>>,
     pub cur_token_type: RefCell<TokenType>,
     pub cur_token_value: RefCell<TokenValue>,
+    #[struct_ref_cell_setter(Copy)]
     pub last_token_start: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub last_token_end: RefCell<i32>,
     pub last_token_start_loc: RefCell<Option<Position>>,
     pub last_token_end_loc: RefCell<Option<Position>>,
     pub context: RefCell<Vec<TokenContext>>,
+    #[struct_ref_cell_setter(Copy)]
     pub expr_allowed: RefCell<bool>,
     pub is_in_module: bool,
+    #[struct_ref_cell_setter(Copy)]
     pub is_strict: RefCell<bool>,
+    #[struct_ref_cell_setter(Copy)]
     pub potential_arrow_at: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub is_potential_arrow_in_for_await: RefCell<bool>,
+    #[struct_ref_cell_setter(Copy)]
     pub yield_pos: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub await_pos: RefCell<i32>,
+    #[struct_ref_cell_setter(Copy)]
     pub await_ident_pos: RefCell<i32>,
     pub labels: RefCell<Vec<String>>,
     pub undefined_exports: RefCell<HashMap<String, Position>>,
@@ -174,25 +189,10 @@ impl Parser {
             private_name_stack: RefCell::from(vec![]),
         };
         let cur_position = parser.get_cur_position();
-        parser.set_cur_token_start_loc(cur_position);
-        parser.set_cur_token_end_loc(cur_position);
-        parser.set_context(parser.get_initial_context());
+        parser.set_cur_token_start_loc(&cur_position);
+        parser.set_cur_token_end_loc(&cur_position);
+        parser.set_context(&parser.get_initial_context());
         parser
-    }
-
-    fn set_cur_token_start_loc(&self, position: Option<Position>) {
-        let mut cur_token_start_loc = self.cur_token_start_loc.borrow_mut();
-        *cur_token_start_loc = position;
-    }
-
-    fn set_cur_token_end_loc(&self, position: Option<Position>) {
-        let mut cur_token_end_loc = self.cur_token_end_loc.borrow_mut();
-        *cur_token_end_loc = position;
-    }
-
-    fn set_context(&self, value: Vec<TokenContext>) {
-        let mut context = self.context.borrow_mut();
-        *context = value;
     }
 
     fn set_is_strict(&self, value: bool) {
