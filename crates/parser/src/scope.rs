@@ -23,3 +23,6 @@ pub(crate) const BIND_LEXICAL: i32 = 2; // Let- or const-style binding
 pub(crate) const BIND_FUNCTION: i32 = 3; // Function declaration
 pub(crate) const BIND_SIMPLE_CATCH: i32 = 4; // Simple (identifier pattern) catch binding
 pub(crate) const BIND_OUTSIDE: i32 = 5; // Special case for function names as bound inside the function
+
+#[derive(Debug, Clone)]
+pub struct Scope {}

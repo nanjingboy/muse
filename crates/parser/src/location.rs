@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::whitespace::next_line_break;
+use crate::{parser::Parser, whitespace::next_line_break};
 
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct Position {
@@ -24,12 +24,12 @@ impl Position {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SourceLocation {
     pub start: Position,
-    pub end: Position,
+    pub end: Option<Position>,
     pub source: Option<String>,
 }
 
 impl SourceLocation {
-    pub fn new(start: &Position, end: &Position, source: &Option<String>) -> Self {
+    pub fn new(start: &Position, end: &Option<Position>, source: &Option<String>) -> Self {
         SourceLocation {
             start: start.clone(),
             end: end.clone(),
@@ -48,5 +48,22 @@ pub fn get_line_info(input: &str, offset: i32) -> Position {
         }
         line += 1;
         cur = next_break;
+    }
+}
+
+pub trait LocationParser {
+    fn get_cur_position(&self) -> Option<Position>;
+}
+
+impl LocationParser for Parser {
+    fn get_cur_position(&self) -> Option<Position> {
+        if self.options.locations {
+            Some(Position::new(
+                self.cur_token_line.take(),
+                self.cur_token_pos.take() - self.cur_token_line_start.take(),
+            ))
+        } else {
+            None
+        }
     }
 }
