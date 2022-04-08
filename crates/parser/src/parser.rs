@@ -194,9 +194,4 @@ impl Parser {
         parser.set_context(&parser.get_initial_context());
         parser
     }
-
-    fn set_is_strict(&self, value: bool) {
-        let mut is_strict = self.is_strict.borrow_mut();
-        *is_strict = value;
-    }
 }
