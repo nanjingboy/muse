@@ -12,7 +12,7 @@ use crate::{
     node::Node,
     options::{EcmaVersion, Options, SourceType},
     regexp::RegExpValidationState,
-    scope::Scope,
+    scope::{Scope, ScopeParser, SCOPE_TOP},
     token::{
         context::{TokenContext, TokenContextParser},
         types::{get_token_types, TokenType},
@@ -192,6 +192,7 @@ impl Parser {
         parser.set_cur_token_start_loc(&cur_position);
         parser.set_cur_token_end_loc(&cur_position);
         parser.set_context(&parser.get_initial_context());
+        parser.enter_scope(SCOPE_TOP);
         parser
     }
 }

@@ -2,7 +2,7 @@ pub fn is_new_line(code: i32) -> bool {
     code == 10 || code == 13 || code == 0x2028 || code == 0x2029
 }
 
-pub(crate) fn next_line_break(code: &str, start: i32, end: i32) -> i32 {
+pub fn next_line_break(code: &str, start: i32, end: i32) -> i32 {
     let chars = Vec::from(code);
     for index in start..end {
         let next = chars[index as usize] as i32;

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{parser::Parser, whitespace::next_line_break};
+use crate::{errors::ParserError, parser::Parser, whitespace::next_line_break};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Position {
@@ -53,6 +53,7 @@ pub fn get_line_info(input: &str, offset: i32) -> Position {
 
 pub trait LocationParser {
     fn get_cur_position(&self) -> Option<Position>;
+    fn raise_syntax_error(&self, pos: i32, message: &str) -> ParserError;
 }
 
 impl LocationParser for Parser {
@@ -64,6 +65,17 @@ impl LocationParser for Parser {
             ))
         } else {
             None
+        }
+    }
+
+    fn raise_syntax_error(&self, pos: i32, message: &str) -> ParserError {
+        let location = get_line_info(&self.input, pos);
+        let message = format!("{:} ({:}:{:})", message, location.line, location.column);
+        ParserError::SyntaxError {
+            message,
+            pos,
+            loc: location,
+            raised_at: pos,
         }
     }
 }

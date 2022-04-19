@@ -1,3 +1,4 @@
+mod errors;
 mod identifier;
 mod location;
 mod node;
@@ -6,5 +7,6 @@ mod parser;
 mod regexp;
 mod scope;
 mod token;
+mod types;
 mod utils;
 mod whitespace;

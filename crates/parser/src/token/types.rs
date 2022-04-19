@@ -36,7 +36,7 @@ lazy_static! {
     static ref KEYWORDS_LOCK: RwLock<HashMap<String, TokenType>> = RwLock::new(HashMap::new());
 }
 
-pub(crate) fn get_keywords() -> HashMap<String, TokenType> {
+pub fn get_keywords() -> HashMap<String, TokenType> {
     KEYWORDS_LOCK.read().unwrap().clone()
 }
 
