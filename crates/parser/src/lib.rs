@@ -8,5 +8,6 @@ mod regexp;
 mod scope;
 mod token;
 mod types;
+mod unicode_properties;
 mod utils;
 mod whitespace;
