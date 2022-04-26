@@ -1,10 +1,11 @@
 use std::{
-    cell::{Ref, RefCell},
+    borrow::BorrowMut,
+    cell::{Cell, Ref, RefCell},
     collections::HashMap,
+    rc::Rc,
 };
 
 use fancy_regex::Regex;
-use muse_macros::StructRefCellSetter;
 use serde_json::json;
 
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
     regexp::RegExpValidationState,
     scope::{Scope, ScopeParser, SCOPE_TOP},
     token::{
-        context::{TokenContext, TokenContextParser},
+        context::{get_initial_context, TokenContext},
         types::{get_token_types, TokenType},
         TokenValue,
     },
@@ -49,7 +50,7 @@ fn get_reserved_words(version: &EcmaVersion, source_type: &SourceType) -> String
     }
 }
 
-#[derive(Debug, Clone, StructRefCellSetter)]
+#[derive(Debug, Clone)]
 pub struct Parser {
     pub options: Options,
     pub source_file: Option<String>,
@@ -59,42 +60,28 @@ pub struct Parser {
     pub reserved_words_strict_bind_regex: Regex,
     pub input: String,
     pub contains_esc: bool,
-    #[struct_ref_cell_setter(Copy)]
-    pub cur_token_pos: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub cur_token_line_start: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub cur_token_line: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub cur_token_start: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub cur_token_end: RefCell<i32>,
+    pub cur_token_pos: Cell<i32>,
+    pub cur_token_line_start: Cell<i32>,
+    pub cur_token_line: Cell<i32>,
+    pub cur_token_start: Cell<i32>,
+    pub cur_token_end: Cell<i32>,
     pub cur_token_start_loc: RefCell<Option<Position>>,
     pub cur_token_end_loc: RefCell<Option<Position>>,
     pub cur_token_type: RefCell<TokenType>,
     pub cur_token_value: RefCell<TokenValue>,
-    #[struct_ref_cell_setter(Copy)]
-    pub last_token_start: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub last_token_end: RefCell<i32>,
+    pub last_token_start: Cell<i32>,
+    pub last_token_end: Cell<i32>,
     pub last_token_start_loc: RefCell<Option<Position>>,
     pub last_token_end_loc: RefCell<Option<Position>>,
     pub context: RefCell<Vec<TokenContext>>,
-    #[struct_ref_cell_setter(Copy)]
-    pub expr_allowed: RefCell<bool>,
+    pub expr_allowed: Cell<bool>,
     pub is_in_module: bool,
-    #[struct_ref_cell_setter(Copy)]
-    pub is_strict: RefCell<bool>,
-    #[struct_ref_cell_setter(Copy)]
-    pub potential_arrow_at: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub is_potential_arrow_in_for_await: RefCell<bool>,
-    #[struct_ref_cell_setter(Copy)]
-    pub yield_pos: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub await_pos: RefCell<i32>,
-    #[struct_ref_cell_setter(Copy)]
-    pub await_ident_pos: RefCell<i32>,
+    pub is_strict: Cell<bool>,
+    pub potential_arrow_at: Cell<i32>,
+    pub is_potential_arrow_in_for_await: Cell<bool>,
+    pub yield_pos: Cell<i32>,
+    pub await_pos: Cell<i32>,
+    pub await_ident_pos: Cell<i32>,
     pub labels: RefCell<Vec<String>>,
     pub undefined_exports: RefCell<HashMap<String, Position>>,
     pub scope_stack: RefCell<Vec<Scope>>,
@@ -103,7 +90,7 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(options: &Options, input: &str, start_pos: &Option<i32>) -> Self {
+    pub fn new(options: &Options, input: &str, start_pos: &Option<i32>) -> Rc<Parser> {
         let allow_reserved = match options.allow_reserved {
             Some(v) => v,
             None => {
@@ -142,7 +129,7 @@ impl Parser {
             None => (0, 0, 1),
         };
 
-        let parser = Parser {
+        let parser = Rc::new(Parser {
             options: Options {
                 allow_reserved: Some(allow_reserved),
                 ..options.clone()
@@ -160,38 +147,39 @@ impl Parser {
             )),
             input: input.to_owned(),
             contains_esc: false,
-            cur_token_pos: RefCell::from(cur_token_pos),
-            cur_token_line_start: RefCell::from(cur_token_line_start),
-            cur_token_line: RefCell::from(cur_token_line),
-            cur_token_start: RefCell::from(cur_token_pos),
-            cur_token_end: RefCell::from(cur_token_pos),
+            cur_token_pos: Cell::from(cur_token_pos),
+            cur_token_line_start: Cell::from(cur_token_line_start),
+            cur_token_line: Cell::from(cur_token_line),
+            cur_token_start: Cell::from(cur_token_pos),
+            cur_token_end: Cell::from(cur_token_pos),
             cur_token_start_loc: RefCell::from(None),
             cur_token_end_loc: RefCell::from(None),
             cur_token_type: RefCell::from(get_token_types().eof.clone()),
             cur_token_value: RefCell::from(TokenValue::Null),
-            last_token_start: RefCell::from(cur_token_pos),
-            last_token_end: RefCell::from(cur_token_pos),
+            last_token_start: Cell::from(cur_token_pos),
+            last_token_end: Cell::from(cur_token_pos),
             last_token_start_loc: RefCell::from(None),
             last_token_end_loc: RefCell::from(None),
-            context: RefCell::from(vec![]),
-            expr_allowed: RefCell::from(true),
+            context: RefCell::from(get_initial_context()),
+            expr_allowed: Cell::from(true),
             is_in_module: options.source_type == SourceType::Module,
-            is_strict: RefCell::from(false),
-            potential_arrow_at: RefCell::from(-1),
-            is_potential_arrow_in_for_await: RefCell::from(false),
-            yield_pos: RefCell::from(0),
-            await_pos: RefCell::from(0),
-            await_ident_pos: RefCell::from(0),
+            is_strict: Cell::from(false),
+            potential_arrow_at: Cell::from(-1),
+            is_potential_arrow_in_for_await: Cell::from(false),
+            yield_pos: Cell::from(0),
+            await_pos: Cell::from(0),
+            await_ident_pos: Cell::from(0),
             labels: RefCell::from(vec![]),
             undefined_exports: RefCell::from(HashMap::new()),
             scope_stack: RefCell::from(vec![]),
             regexp_state: RefCell::from(None),
             private_name_stack: RefCell::from(vec![]),
-        };
+        });
         let cur_position = parser.get_cur_position();
-        parser.set_cur_token_start_loc(&cur_position);
-        parser.set_cur_token_end_loc(&cur_position);
-        parser.set_context(&parser.get_initial_context());
+        *parser.cur_token_start_loc.borrow_mut() = cur_position.clone();
+        *parser.cur_token_end_loc.borrow_mut() = cur_position.clone();
+        *parser.regexp_state.borrow_mut() =
+            Some(RegExpValidationState::new(Rc::downgrade(&parser)));
         parser.enter_scope(SCOPE_TOP);
         parser
     }

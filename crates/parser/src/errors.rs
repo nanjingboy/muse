@@ -11,4 +11,7 @@ pub enum ParserError {
         loc: Position,
         raised_at: i32,
     },
+
+    #[error("UnKnown error")]
+    UnKnown,
 }

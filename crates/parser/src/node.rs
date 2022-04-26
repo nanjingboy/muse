@@ -50,7 +50,7 @@ pub trait NodeParser {
 impl NodeParser for Parser {
     fn start_node(&self) -> Node {
         self.start_node_at(
-            self.cur_token_start.borrow().clone(),
+            self.cur_token_start.get(),
             &self.cur_token_start_loc.borrow().clone(),
         )
     }
@@ -63,7 +63,7 @@ impl NodeParser for Parser {
         self.finish_node_at(
             node,
             node_type,
-            self.last_token_end.borrow().clone(),
+            self.last_token_end.get(),
             &self.last_token_end_loc.borrow().clone(),
         );
     }

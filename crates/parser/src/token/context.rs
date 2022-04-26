@@ -54,12 +54,6 @@ pub fn get_token_context_types() -> &'static TokenContextTypes {
     &(*TOKEN_CONTEXT_TYPES)
 }
 
-pub trait TokenContextParser {
-    fn get_initial_context(&self) -> Vec<TokenContext>;
-}
-
-impl TokenContextParser for Parser {
-    fn get_initial_context(&self) -> Vec<TokenContext> {
-        vec![TOKEN_CONTEXT_TYPES.b_stat.clone()]
-    }
+pub fn get_initial_context() -> Vec<TokenContext> {
+    vec![TOKEN_CONTEXT_TYPES.b_stat.clone()]
 }
