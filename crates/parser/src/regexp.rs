@@ -1,6 +1,7 @@
 use std::rc::Weak;
 
 use crate::{
+    char_codes::*,
     errors::ParserError,
     location::LocationParser,
     parser::Parser,
@@ -178,28 +179,23 @@ fn code_point_to_string(code: i32) -> String {
 }
 
 fn is_octal_digit(code: i32) -> bool {
-    // 0x30: 0, 0x37: 7
-    code >= 0x30 && code <= 0x37
+    code >= DIGIT_0 && code <= DIGIT_7
 }
 
 fn is_hex_digit(code: i32) -> bool {
-    // 0x30: 0, 0x39: 9, 0x41: A, 0x46: F, 0x61: a, 0x66: f
-    (code >= 0x30 && code <= 0x39)
-        || (code >= 0x41 && code <= 0x46)
-        || (code >= 0x61 && code <= 0x66)
+    (code >= DIGIT_0 && code <= DIGIT_9)
+        || (code >= UPPERCASE_A && code <= UPPERCASE_F)
+        || (code >= LOWERCASE_A && code <= LOWERCASE_F)
 }
 
 fn hex_to_int(code: i32) -> i32 {
-    // 0x41: A, 0x46: F
-    if code >= 0x41 && code <= 0x46 {
-        return 10 + (code - 0x41);
+    if code >= UPPERCASE_A && code <= UPPERCASE_F {
+        return 10 + (code - UPPERCASE_A);
     }
-    // 0x61: a, 0x66: f
-    if code >= 0x61 && code <= 0x66 {
-        return 10 + (code - 0x61);
+    if code >= LOWERCASE_A && code <= LOWERCASE_F {
+        return 10 + (code - LOWERCASE_A);
     }
-    // 0x30: 0
-    code - 0x30
+    code - DIGIT_0
 }
 
 pub trait RegexpParser {
@@ -237,33 +233,26 @@ impl RegexpParser for Parser {
     fn regexp_eat_assertion(&self, state: &mut RegExpValidationState) -> Result<bool, ParserError> {
         let start = state.pos;
         state.last_assertion_is_quantifiable = false;
-        // 0x5e: ^, 0x24:$
-        if state.eat(0x5e, false) || state.eat(0x24, false) {
+        if state.eat(CARET, false) || state.eat(DOLLAR_SIGN, false) {
             return Ok(true);
         }
-
-        // 0x5C: \, 0x42: B, 0x62: b
-        if state.eat(0x5c, false) {
-            if state.eat(0x42, false) || state.eat(0x62, false) {
+        if state.eat(BACKSLASH, false) {
+            if state.eat(UPPERCASE_B, false) || state.eat(LOWERCASE_B, false) {
                 return Ok(true);
             }
             state.pos = start
         }
 
         // Lookahead / Lookbehind
-        // 0x28: (, 0x3f: ?
-        if state.eat(0x28, false) && state.eat(0x3f, false) {
+        if state.eat(LEFT_PARENTHESIS, false) && state.eat(QUESTION_MARK, false) {
             let mut lookbehind = false;
             let ecma_version: i32 = self.options.ecma_version.clone().try_into().unwrap();
             if ecma_version >= 9 {
-                // 0x3c: <
-                lookbehind = state.eat(0x3c, false);
+                lookbehind = state.eat(LESS_THAN, false);
             }
-            // 0x3d: =, 0x21: !
-            if state.eat(0x3d, false) || state.eat(0x21, false) {
+            if state.eat(EQUALS_TO, false) || state.eat(EXCLAMATION_MARK, false) {
                 self.regexp_disjunction(state)?;
-                // 0x29: )
-                if !state.eat(0x29, false) {
+                if !state.eat(RIGHT_PARENTHESIS, false) {
                     state.raise("Unterminated group")?;
                 }
                 state.last_assertion_is_quantifiable = !lookbehind;
@@ -320,15 +309,13 @@ impl RegexpParser for Parser {
     /// https://www.ecma-international.org/ecma-262/8.0/#prod-Disjunction
     fn regexp_disjunction(&self, state: &mut RegExpValidationState) -> Result<(), ParserError> {
         self.regexp_alternative(state)?;
-        // 0x7c: |
-        while state.eat(0x7c, false) {
+        while state.eat(VERTICAL_BAR, false) {
             self.regexp_alternative(state)?;
         }
         if self.regexp_eat_quantifier(state, true) {
             state.raise("Nothing to repeat")?;
         }
-        // 0x7b: {
-        if state.eat(0x7b, false) {
+        if state.eat(LEFT_CURLY_BRACE, false) {
             state.raise("Lone quantifier brackets")?;
         }
         Ok(())
@@ -347,12 +334,10 @@ impl RegexpParser for Parser {
         self.regexp_disjunction(state)?;
         let source_len = state.source.len() as i32;
         if state.pos != source_len {
-            // 0x29: )
-            if state.eat(0x29, false) {
+            if state.eat(RIGHT_PARENTHESIS, false) {
                 state.raise("Unmatched ')'")?;
             }
-            // 0x5d: ], 0x7d: }
-            if state.eat(0x5d, false) || state.eat(0x7d, false) {
+            if state.eat(RIGHT_SQUARE_BRACKET, false) || state.eat(RIGHT_CURLY_BRACE, false) {
                 state.raise("Lone quantifier brackets")?;
             }
         }

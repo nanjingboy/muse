@@ -1,3 +1,4 @@
+mod char_codes;
 mod errors;
 mod identifier;
 mod location;

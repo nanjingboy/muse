@@ -1,7 +1,7 @@
 use fancy_regex::Regex;
 use lazy_static::lazy_static;
 
-use crate::utils::get_string_from_code;
+use crate::{char_codes::*, utils::get_string_from_code};
 
 const ASTRAL_IDENTIFIER_START_CODES: [i32; 540] = [
     0, 11, 2, 25, 2, 18, 2, 1, 2, 14, 3, 13, 35, 122, 70, 52, 268, 28, 4, 48, 48, 31, 14, 29, 6,
@@ -68,13 +68,13 @@ pub fn is_in_astral_set(code: i32, set: &[i32]) -> bool {
 }
 
 pub fn is_identifier_start(code: i32, astral: bool) -> bool {
-    if code < 65 {
-        code == 36
-    } else if code < 91 {
+    if code < UPPERCASE_A {
+        code == DOLLAR_SIGN
+    } else if code < LEFT_SQUARE_BRACKET {
         true
-    } else if code < 97 {
-        code == 95
-    } else if code < 123 {
+    } else if code < LOWERCASE_A {
+        code == UNDERSCORE
+    } else if code < LEFT_CURLY_BRACE {
         true
     } else if code <= 0xffff {
         code >= 0xaa
@@ -89,17 +89,17 @@ pub fn is_identifier_start(code: i32, astral: bool) -> bool {
 }
 
 pub fn is_identifier_char(code: i32, astral: bool) -> bool {
-    if code < 48 {
-        code == 36
-    } else if code < 58 {
+    if code < DIGIT_0 {
+        code == DOLLAR_SIGN
+    } else if code < COLON {
         true
-    } else if code < 65 {
+    } else if code < UPPERCASE_A {
         false
-    } else if code < 91 {
+    } else if code < LEFT_SQUARE_BRACKET {
         true
-    } else if code < 97 {
-        code == 95
-    } else if code < 123 {
+    } else if code < LOWERCASE_A {
+        code == UNDERSCORE
+    } else if code < LEFT_CURLY_BRACE {
         true
     } else if code <= 0xffff {
         code >= 0xaa
