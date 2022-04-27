@@ -53,7 +53,7 @@ pub fn get_line_info(input: &str, offset: i32) -> Position {
 
 pub trait LocationParser {
     fn get_cur_position(&self) -> Option<Position>;
-    fn raise_syntax_error(&self, pos: i32, message: &str) -> ParserError;
+    fn raise_syntax_error(&self, pos: i32, message: &str) -> Result<(), ParserError>;
 }
 
 impl LocationParser for Parser {
@@ -68,14 +68,14 @@ impl LocationParser for Parser {
         }
     }
 
-    fn raise_syntax_error(&self, pos: i32, message: &str) -> ParserError {
+    fn raise_syntax_error(&self, pos: i32, message: &str) -> Result<(), ParserError> {
         let location = get_line_info(&self.input, pos);
         let message = format!("{:} ({:}:{:})", message, location.line, location.column);
-        ParserError::SyntaxError {
+        Err(ParserError::SyntaxError {
             message,
             pos,
             loc: location,
             raised_at: pos,
-        }
+        })
     }
 }

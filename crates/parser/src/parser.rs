@@ -1,12 +1,10 @@
 use std::{
-    borrow::BorrowMut,
-    cell::{Cell, Ref, RefCell},
+    cell::{Cell, RefCell},
     collections::HashMap,
     rc::Rc,
 };
 
 use fancy_regex::Regex;
-use serde_json::json;
 
 use crate::{
     location::{LocationParser, Position},

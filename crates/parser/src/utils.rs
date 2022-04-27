@@ -1,5 +1,12 @@
 use fancy_regex::Regex;
 
+pub fn get_string_from_codes(codes: Vec<i32>) -> String {
+    codes
+        .into_iter()
+        .map(|code| get_string_from_code(code))
+        .collect()
+}
+
 pub fn get_string_from_code(code: i32) -> String {
     char::from_u32(code as u32)
         .map(|v| v.to_string())

@@ -1,7 +1,5 @@
 use lazy_static::lazy_static;
 
-use crate::parser::Parser;
-
 #[derive(Debug, Clone)]
 pub struct TokenContext {
     pub token: String,

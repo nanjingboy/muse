@@ -1,5 +1,3 @@
-use std::{cell::RefCell, collections::HashMap};
-
 use crate::{errors::ParserError, location::LocationParser, parser::Parser, types::Identifier};
 
 /// Each scope gets a bitset that may contain these flags
@@ -32,11 +30,11 @@ pub const BIND_OUTSIDE: i32 = 5; // Special case for function names as bound ins
 pub struct Scope {
     pub flags: i32,
     // A list of var-declared names in the current lexical scope
-    pub var: RefCell<Vec<String>>,
+    pub var: Vec<String>,
     // A list of lexically-declared names in the current lexical scope
-    pub lexical: RefCell<Vec<String>>,
+    pub lexical: Vec<String>,
     // A list of lexically-declared FunctionDeclaration names in the current lexical scope
-    pub functions: RefCell<Vec<String>>,
+    pub functions: Vec<String>,
     // A switch to disallow the identifier reference 'arguments'
     pub in_class_field_init: bool,
 }
@@ -45,9 +43,9 @@ impl Scope {
     pub fn new(flags: i32) -> Self {
         Scope {
             flags,
-            var: RefCell::new(vec![]),
-            lexical: RefCell::new(vec![]),
-            functions: RefCell::new(vec![]),
+            var: vec![],
+            lexical: vec![],
+            functions: vec![],
             in_class_field_init: false,
         }
     }
@@ -69,8 +67,8 @@ pub trait ScopeParser {
 
 impl ScopeParser for Parser {
     fn replace_current_scope(&self, key: &str, scope: &Scope) {
-        let scope = scope.clone();
-        scope.lexical.borrow_mut().push(key.to_owned());
+        let mut scope = scope.clone();
+        scope.lexical.push(key.to_owned());
         let mut scope_stack = self.scope_stack.borrow_mut();
         scope_stack.pop();
         scope_stack.push(scope);
@@ -127,9 +125,9 @@ impl ScopeParser for Parser {
             BIND_LEXICAL => {
                 if let Some(scope) = self.current_scope() {
                     let name = name.to_owned();
-                    redeclared = scope.lexical.borrow().contains(&name)
-                        || scope.functions.borrow().contains(&name)
-                        || scope.var.borrow().contains(&name);
+                    redeclared = scope.lexical.contains(&name)
+                        || scope.functions.contains(&name)
+                        || scope.var.contains(&name);
                     self.replace_current_scope(&name, &scope);
                     self.remove_undefined_exports(&name, &scope);
                 }
@@ -143,32 +141,33 @@ impl ScopeParser for Parser {
                 if let Some(scope) = self.current_scope() {
                     let name = name.to_owned();
                     if self.treat_functions_as_var_in_scope(&scope) {
-                        redeclared = scope.lexical.borrow().contains(&name);
+                        redeclared = scope.lexical.contains(&name);
                     } else {
-                        redeclared = scope.lexical.borrow().contains(&name)
-                            || scope.var.borrow().contains(&name);
+                        redeclared = scope.lexical.contains(&name) || scope.var.contains(&name);
                     }
                     self.replace_current_scope(&name, &scope);
                 }
             }
             _ => {
-                let scope_stack = self.scope_stack.borrow_mut();
+                let mut scope_stack = self.scope_stack.borrow_mut();
                 let mut index: i32 = scope_stack.len() as i32 - 1;
                 while index >= 0 {
                     let key = name.to_owned();
-                    let scope = &scope_stack[index as usize];
-                    if scope.lexical.borrow().contains(&key)
-                        && !((scope.flags & SCOPE_SIMPLE_CATCH) > 0
-                            && scope.lexical.borrow()[0].eq(&key))
-                        || !self.treat_functions_as_var_in_scope(scope)
-                            && scope.functions.borrow().contains(&key)
+                    let mut scope = scope_stack[index as usize].clone();
+                    let scope_flags = scope.flags;
+                    if scope.lexical.contains(&key)
+                        && !((scope_flags & SCOPE_SIMPLE_CATCH) > 0 && scope.lexical[0].eq(&key))
+                        || !self.treat_functions_as_var_in_scope(&scope)
+                            && scope.functions.contains(&key)
                     {
                         redeclared = true;
                         break;
                     }
-                    self.remove_undefined_exports(&key, scope);
-                    scope.lexical.borrow_mut().push(key);
-                    if (scope.flags & SCOPE_VAR) > 0 {
+
+                    self.remove_undefined_exports(&key, &scope);
+                    scope.lexical.push(key);
+                    scope_stack[index as usize] = scope;
+                    if (scope_flags & SCOPE_VAR) > 0 {
                         break;
                     }
                     index -= 1;
@@ -176,10 +175,10 @@ impl ScopeParser for Parser {
             }
         };
         if redeclared {
-            Err(self.raise_syntax_error(
+            self.raise_syntax_error(
                 pos,
                 &format!("Identifier '{:}' has already been declared", name),
-            ))
+            )
         } else {
             Ok(())
         }
@@ -188,7 +187,7 @@ impl ScopeParser for Parser {
     fn check_local_export(&self, identifier: &Identifier) {
         if let Some(scope) = self.scope_stack.borrow().first() {
             let name = identifier.name.clone();
-            if !scope.lexical.borrow().contains(&name) && !scope.var.borrow().contains(&name) {
+            if !scope.lexical.contains(&name) && !scope.var.contains(&name) {
                 self.undefined_exports
                     .borrow_mut()
                     .insert(name, identifier.loc.start.clone());
