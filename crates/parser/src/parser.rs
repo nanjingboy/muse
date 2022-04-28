@@ -33,11 +33,10 @@ fn get_keywords(version: &EcmaVersion, source_type: &SourceType) -> String {
     }
 }
 
-fn get_reserved_words(version: &EcmaVersion, source_type: &SourceType) -> String {
-    let version_number: i32 = version.clone().try_into().unwrap();
-    let reserved_words = if version_number >= 6 {
+fn get_reserved_words(ecma_version: i32, source_type: &SourceType) -> String {
+    let reserved_words = if ecma_version >= 6 {
         "enum"
-    } else if version_number == 5 {
+    } else if ecma_version == 5 {
         "class|enum|extends|super|const|export|import"
     } else {
         "abstract|boolean|byte|char|class|double|enum|export|extends|final|float|goto|implements|import|int|interface|long|native|package|private|protected|public|short|static|super|synchronized|throws|transient|volatile"
@@ -91,13 +90,10 @@ impl Parser {
     pub fn new(options: &Options, input: &str, start_pos: &Option<i32>) -> Rc<Parser> {
         let allow_reserved = match options.allow_reserved {
             Some(v) => v,
-            None => {
-                let ecma_version: i32 = options.ecma_version.clone().try_into().unwrap();
-                ecma_version < 5
-            }
+            None => options.get_ecma_version_number() < 5,
         };
         let reserved_words = if allow_reserved {
-            get_reserved_words(&options.ecma_version, &options.source_type)
+            get_reserved_words(options.get_ecma_version_number(), &options.source_type)
         } else {
             "".to_string()
         };

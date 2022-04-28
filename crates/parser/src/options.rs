@@ -15,7 +15,7 @@ impl Default for SourceType {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, IntEnum, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, IntEnum, Serialize, Deserialize)]
 #[int_enum(i32)]
 pub enum EcmaVersion {
     Ecma3 = 3,
@@ -54,4 +54,10 @@ pub struct Options {
     pub direct_source_file: Option<String>,
     #[serde(default)]
     pub preserve_parens: bool,
+}
+
+impl Options {
+    pub fn get_ecma_version_number(&self) -> i32 {
+        self.ecma_version.try_into().unwrap()
+    }
 }

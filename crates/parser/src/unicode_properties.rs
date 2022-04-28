@@ -83,6 +83,18 @@ impl UnicodeProperties {
             },
         }
     }
+
+    pub fn get_non_binary_regex(&self, key: &str) -> Option<Regex> {
+        match key.to_lowercase().as_ref() {
+            "general_category" => Some(self.non_binary.general_category.clone()),
+            "script" => Some(self.non_binary.script.clone()),
+            "script_extensions" => Some(self.non_binary.script_extensions.clone()),
+            "gc" => Some(self.non_binary.gc.clone()),
+            "sc" => Some(self.non_binary.sc.clone()),
+            "scx" => Some(self.non_binary.scx.clone()),
+            _ => None,
+        }
+    }
 }
 
 lazy_static! {
