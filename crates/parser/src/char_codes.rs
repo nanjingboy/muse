@@ -1,8 +1,10 @@
-pub(crate) const BACK_SPACE: i32 = 0x8;
-pub(crate) const TAB: i32 = 0x9; //  '\t'
-pub(crate) const LINE_FEED: i32 = 0x10; //  '\n'
-pub(crate) const CARRIAGE_RETURN: i32 = 0xd; //  '\r'
-pub(crate) const SHIFT_OUT: i32 = 0xe;
+pub(crate) const BACK_SPACE: i32 = 0x08;
+pub(crate) const TAB: i32 = 0x09; //  '\t'
+pub(crate) const LINE_FEED: i32 = 0x0a; //  '\n'
+pub(crate) const VERTICAL_TAB: i32 = 0x0b; // '\v'
+pub(crate) const FORM_FEED: i32 = 0x0c; // '\f'
+pub(crate) const CARRIAGE_RETURN: i32 = 0x0d; //  '\r'
+pub(crate) const SHIFT_OUT: i32 = 0x0e;
 pub(crate) const SPACE: i32 = 0x20;
 pub(crate) const EXCLAMATION_MARK: i32 = 0x21; // '!'
 pub(crate) const QUOTATION_MARK: i32 = 0x22; //  '"'

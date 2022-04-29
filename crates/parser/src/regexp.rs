@@ -1,4 +1,4 @@
-use std::{fmt::format, rc::Weak};
+use std::rc::Weak;
 
 use crate::{
     char_codes::*,
@@ -289,6 +289,22 @@ pub trait RegexpParser {
     fn regexp_eat_group_name(&self, state: &mut RegExpValidationState)
         -> Result<bool, ParserError>;
     fn regexp_eat_k_group_name(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_syntax_character(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_identity_escape(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_octal_digit(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_legacy_octal_escape_sequence(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_hex_escape_sequence(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_zero(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_control_letter(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_c_control_letter(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_control_escape(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_character_escape(
         &self,
         state: &mut RegExpValidationState,
     ) -> Result<bool, ParserError>;
@@ -723,10 +739,190 @@ impl RegexpParser for Parser {
         Ok(false)
     }
 
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-SyntaxCharacter
+    fn regexp_eat_syntax_character(&self, state: &mut RegExpValidationState) -> bool {
+        let code = state.current(false);
+        if is_syntax_character(code) {
+            state.last_int_value = code;
+            state.advance(false);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-IdentityEscape
+    fn regexp_eat_identity_escape(&self, state: &mut RegExpValidationState) -> bool {
+        if state.switch_u {
+            if self.regexp_eat_syntax_character(state) {
+                return true;
+            }
+            if state.eat(SLASH, false) {
+                state.last_int_value = SLASH;
+                return true;
+            }
+            return false;
+        }
+        let code = state.current(false);
+        if code != LOWERCASE_C && (!state.switch_n || code != LOWERCASE_K) {
+            state.last_int_value = code;
+            state.advance(false);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-OctalDigit
+    fn regexp_eat_octal_digit(&self, state: &mut RegExpValidationState) -> bool {
+        let code = state.current(false);
+        if is_octal_digit(code) {
+            state.last_int_value = code - DIGIT_0;
+            state.advance(false);
+            true
+        } else {
+            state.last_int_value = 0;
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-LegacyOctalEscapeSequence
+    /// Allows only 0-377(octal) i.e. 0-255(decimal).
+    fn regexp_eat_legacy_octal_escape_sequence(&self, state: &mut RegExpValidationState) -> bool {
+        if self.regexp_eat_octal_digit(state) {
+            let n1 = state.last_int_value;
+            if self.regexp_eat_octal_digit(state) {
+                let n2 = state.last_int_value;
+                if n1 <= 3 && self.regexp_eat_octal_digit(state) {
+                    state.last_int_value = n1 * 64 + n2 * 8 + state.last_int_value;
+                } else {
+                    state.last_int_value = n1 * 8 + n2;
+                }
+            } else {
+                state.last_int_value = n1;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-HexEscapeSequence
+    fn regexp_eat_hex_escape_sequence(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        let start = state.pos;
+        if state.eat(LOWERCASE_X, false) {
+            if self.regexp_eat_fixed_hex_digits(state, 2) {
+                return Ok(true);
+            }
+            if state.switch_u {
+                state.raise("Invalid escape")?;
+            }
+            state.pos = start;
+        }
+        Ok(false)
+    }
+
+    fn regexp_eat_zero(&self, state: &mut RegExpValidationState) -> bool {
+        if state.current(false) == DIGIT_0 && !is_decimal_digit(state.lookahead(false)) {
+            state.last_int_value = 0;
+            state.advance(false);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-ControlLetter
+    fn regexp_eat_control_letter(&self, state: &mut RegExpValidationState) -> bool {
+        let code = state.current(false);
+        if is_control_letter(code) {
+            state.last_int_value = code % SPACE;
+            state.advance(false);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn regexp_eat_c_control_letter(&self, state: &mut RegExpValidationState) -> bool {
+        let start = state.pos;
+        if state.eat(LOWERCASE_C, false) {
+            if self.regexp_eat_control_letter(state) {
+                return true;
+            }
+            state.pos = start;
+        }
+        return false;
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-ControlEscape
+    fn regexp_eat_control_escape(&self, state: &mut RegExpValidationState) -> bool {
+        let code = state.current(false);
+        match code {
+            LOWERCASE_T => {
+                state.last_int_value = TAB;
+                state.advance(false);
+                true
+            }
+            LOWERCASE_N => {
+                state.last_int_value = LINE_FEED;
+                state.advance(false);
+                true
+            }
+            LOWERCASE_V => {
+                state.last_int_value = VERTICAL_TAB;
+                state.advance(false);
+                true
+            }
+            LOWERCASE_F => {
+                state.last_int_value = FORM_FEED;
+                state.advance(false);
+                true
+            }
+            LOWERCASE_R => {
+                state.last_int_value = CARRIAGE_RETURN;
+                state.advance(false);
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-CharacterEscape
+    fn regexp_eat_character_escape(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        Ok(self.regexp_eat_control_escape(state)
+            || self.regexp_eat_c_control_letter(state)
+            || self.regexp_eat_zero(state)
+            || self.regexp_eat_hex_escape_sequence(state)?
+            || self.regexp_eat_reg_exp_unicode_escape_sequence(state, false)?
+            || (!state.switch_u && self.regexp_eat_legacy_octal_escape_sequence(state))
+            || self.regexp_eat_identity_escape(state))
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-AtomEscape
     fn regexp_eat_atom_escape(
         &self,
         state: &mut RegExpValidationState,
     ) -> Result<bool, ParserError> {
+        if self.regexp_eat_back_reference(state)
+            || self.regexp_eat_character_class_escape(state)?
+            || self.regexp_eat_character_escape(state)?
+            || (state.switch_n && self.regexp_eat_k_group_name(state)?)
+        {
+            return Ok(true);
+        }
+        if state.switch_u {
+            if state.current(false) == LOWERCASE_C {
+                state.raise("Invalid unicode escape")?;
+            }
+            state.raise("Invalid escape")?;
+        }
         Ok(false)
     }
 
