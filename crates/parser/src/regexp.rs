@@ -243,7 +243,12 @@ fn is_valid_unicode(code: i32) -> bool {
 
 pub trait RegexpParser {
     fn validate_reg_exp_flags(&self, state: &RegExpValidationState) -> Result<(), ParserError>;
+    fn validate_reg_exp_pattern(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<(), ParserError>;
     fn regexp_eat_assertion(&self, state: &mut RegExpValidationState) -> Result<bool, ParserError>;
+    fn regexp_eat_decimal_digits(&self, state: &mut RegExpValidationState) -> bool;
     fn regexp_eat_decimal_escape(&self, state: &mut RegExpValidationState) -> bool;
     fn regexp_validate_unicode_property_name_or_value(
         &self,
@@ -257,6 +262,10 @@ pub trait RegexpParser {
         value: &str,
     ) -> Result<(), ParserError>;
     fn regexp_eat_unicode_property_value(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_lone_unicode_property_name_or_value(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> bool;
     fn regexp_eat_unicode_property_name(&self, state: &mut RegExpValidationState) -> bool;
     fn regexp_eat_unicode_property_value_expression(
         &self,
@@ -316,6 +325,38 @@ pub trait RegexpParser {
         &self,
         state: &mut RegExpValidationState,
     ) -> Result<bool, ParserError>;
+    fn regexp_eat_class_control_letter(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_class_escape(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_class_atom(&self, state: &mut RegExpValidationState)
+        -> Result<bool, ParserError>;
+    fn regexp_class_ranges(&self, state: &mut RegExpValidationState) -> Result<(), ParserError>;
+    fn regexp_eat_character_class(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_uncapturing_group(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_group_specifier(&self, state: &mut RegExpValidationState) -> Result<(), ParserError>;
+    fn regexp_eat_capturing_group(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_braced_quantifier(
+        &self,
+        state: &mut RegExpValidationState,
+        no_error: bool,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_invalid_braced_quantifier(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_extended_pattern_character(&self, state: &mut RegExpValidationState) -> bool;
+    fn regexp_eat_atom(&self, state: &mut RegExpValidationState) -> Result<bool, ParserError>;
     fn regexp_eat_extended_atom(
         &self,
         state: &mut RegExpValidationState,
@@ -323,7 +364,16 @@ pub trait RegexpParser {
     fn regexp_eat_pattern_characters(&self, state: &mut RegExpValidationState) -> bool;
     fn regexp_eat_term(&self, state: &mut RegExpValidationState) -> Result<bool, ParserError>;
     fn regexp_alternative(&self, state: &mut RegExpValidationState) -> Result<(), ParserError>;
-    fn regexp_eat_quantifier(&self, state: &mut RegExpValidationState, no_error: bool) -> bool;
+    fn regexp_eat_quantifier_prefix(
+        &self,
+        state: &mut RegExpValidationState,
+        no_error: bool,
+    ) -> Result<bool, ParserError>;
+    fn regexp_eat_quantifier(
+        &self,
+        state: &mut RegExpValidationState,
+        no_error: bool,
+    ) -> Result<bool, ParserError>;
     fn regexp_disjunction(&self, state: &mut RegExpValidationState) -> Result<(), ParserError>;
     fn regexp_pattern(&self, state: &mut RegExpValidationState) -> Result<(), ParserError>;
 }
@@ -341,6 +391,27 @@ impl RegexpParser for Parser {
             if flags.contains(flag) {
                 return self.raise_syntax_error(state.start, "Duplicate regular expression flag");
             }
+        }
+        Ok(())
+    }
+
+    /// Validate the pattern part of a given RegExpLiteral.
+    fn validate_reg_exp_pattern(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<(), ParserError> {
+        self.regexp_pattern(state)?;
+        // The goal symbol for the parse is |Pattern[~U, ~N]|. If the result of
+        // parsing contains a |GroupName|, reparse with the goal symbol
+        // |Pattern[~U, +N]| and use this result instead. Throw a *SyntaxError*
+        // exception if _P_ did not conform to the grammar, if any elements of _P_
+        // were not matched by the parse, or if any Early Error conditions exist.
+        if !state.switch_n
+            && self.options.get_ecma_version_number() >= 9
+            && state.group_names.len() > 0
+        {
+            state.switch_n = true;
+            self.regexp_pattern(state)?;
         }
         Ok(())
     }
@@ -376,6 +447,21 @@ impl RegexpParser for Parser {
         }
         state.pos = start;
         Ok(false)
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-DecimalDigits
+    fn regexp_eat_decimal_digits(&self, state: &mut RegExpValidationState) -> bool {
+        let start = state.pos;
+        state.last_int_value = 0;
+        loop {
+            let code = state.current(false);
+            if is_decimal_digit(code) {
+                state.last_int_value = 10 * state.last_int_value + (code - DIGIT_0);
+            } else {
+                break;
+            }
+        }
+        state.pos != start
     }
 
     /// https://www.ecma-international.org/ecma-262/8.0/#prod-DecimalEscape
@@ -449,6 +535,15 @@ impl RegexpParser for Parser {
         state.last_string_value.len() > 0
     }
 
+    /// LoneUnicodePropertyNameOrValue ::
+    ///   UnicodePropertyValueCharacters
+    fn regexp_eat_lone_unicode_property_name_or_value(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> bool {
+        self.regexp_eat_unicode_property_value(state)
+    }
+
     /// UnicodePropertyName ::
     ///   UnicodePropertyNameCharacters
     fn regexp_eat_unicode_property_name(&self, state: &mut RegExpValidationState) -> bool {
@@ -489,7 +584,7 @@ impl RegexpParser for Parser {
         state.pos = start;
 
         // LoneUnicodePropertyNameOrValue
-        if self.regexp_eat_unicode_property_value(state) {
+        if self.regexp_eat_lone_unicode_property_name_or_value(state) {
             let name_or_value = state.last_string_value.clone();
             self.regexp_validate_unicode_property_name_or_value(state, &name_or_value)?;
             Ok(true)
@@ -940,12 +1035,245 @@ impl RegexpParser for Parser {
         Ok(false)
     }
 
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-ClassControlLetter
+    fn regexp_eat_class_control_letter(&self, state: &mut RegExpValidationState) -> bool {
+        let code = state.current(false);
+        if is_decimal_digit(code) || code == UNDERSCORE {
+            state.last_int_value = code % SPACE;
+            state.advance(false);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-ClassEscape
+    fn regexp_eat_class_escape(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        let start = state.pos;
+        if state.eat(LOWERCASE_B, false) {
+            state.last_int_value = BACK_SPACE;
+            return Ok(true);
+        }
+
+        if state.switch_u && state.eat(DASH, false) {
+            state.last_int_value = DASH;
+            return Ok(true);
+        }
+
+        if !state.switch_u && state.eat(LOWERCASE_C, false) {
+            if self.regexp_eat_class_control_letter(state) {
+                return Ok(true);
+            }
+            state.pos = start;
+        }
+        Ok(self.regexp_eat_character_class_escape(state)?
+            || self.regexp_eat_character_escape(state)?)
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-ClassAtom
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-ClassAtomNoDash
+    fn regexp_eat_class_atom(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        let start = state.pos;
+        if state.eat(BACKSLASH, false) {
+            if self.regexp_eat_class_escape(state)? {
+                return Ok(true);
+            }
+            if state.switch_u {
+                let code = state.current(false);
+                if code == LOWERCASE_C || is_octal_digit(code) {
+                    state.raise("Invalid class escape")?;
+                }
+                state.raise("Invalid escape")?;
+            }
+            state.pos = start;
+        }
+        let code = state.current(false);
+        if code != RIGHT_SQUARE_BRACKET {
+            state.last_int_value = code;
+            state.advance(false);
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-ClassRanges
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-NonemptyClassRanges
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-NonemptyClassRangesNoDash
+    fn regexp_class_ranges(&self, state: &mut RegExpValidationState) -> Result<(), ParserError> {
+        while self.regexp_eat_class_atom(state)? {
+            let left = state.last_int_value;
+            if state.eat(DASH, false) && self.regexp_eat_class_atom(state)? {
+                let right = state.last_int_value;
+                if state.switch_u && (left == -1 || right == -1) {
+                    state.raise("Invalid character class")?;
+                }
+                if left != -1 && right != -1 && left > right {
+                    state.raise("Range out of order in character class")?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-CharacterClass
+    fn regexp_eat_character_class(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        if state.eat(LEFT_SQUARE_BRACKET, false) {
+            state.eat(CARET, false);
+            self.regexp_class_ranges(state)?;
+            if state.eat(RIGHT_SQUARE_BRACKET, false) {
+                return Ok(true);
+            }
+            state.raise("Unterminated character class")?;
+        }
+        Ok(false)
+    }
+
+    fn regexp_eat_uncapturing_group(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        let start = state.pos;
+        if state.eat(LEFT_PARENTHESIS, false) {
+            if state.eat(QUESTION_MARK, false) && state.eat(COLON, false) {
+                self.regexp_disjunction(state)?;
+                if state.eat(RIGHT_PARENTHESIS, false) {
+                    return Ok(true);
+                }
+                state.raise("Unterminated group")?;
+            }
+            state.pos = start;
+        }
+        Ok(false)
+    }
+
+    /// GroupSpecifier ::
+    ///   [empty]
+    ///   `?` GroupName
+    fn regexp_group_specifier(&self, state: &mut RegExpValidationState) -> Result<(), ParserError> {
+        if state.eat(QUESTION_MARK, false) {
+            if self.regexp_eat_group_name(state)? {
+                if state.group_names.contains(&state.last_string_value) {
+                    state.raise("Duplicate capture group name")?;
+                }
+                state.group_names.push(state.last_string_value.clone());
+                return Ok(());
+            }
+            state.raise("Invalid group")?;
+        }
+        Ok(())
+    }
+
+    fn regexp_eat_capturing_group(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        if state.eat(LEFT_PARENTHESIS, false) {
+            if self.options.get_ecma_version_number() >= 9 {
+                self.regexp_group_specifier(state)?;
+            } else if state.current(false) == QUESTION_MARK {
+                state.raise("Invalid group")?;
+            }
+            self.regexp_disjunction(state)?;
+            if state.eat(RIGHT_PARENTHESIS, false) {
+                state.num_capturing_parens += 1;
+                return Ok(true);
+            }
+            state.raise("Unterminated group")?;
+        }
+        Ok(false)
+    }
+
+    fn regexp_eat_braced_quantifier(
+        &self,
+        state: &mut RegExpValidationState,
+        no_error: bool,
+    ) -> Result<bool, ParserError> {
+        let start = state.pos;
+        if state.eat(LEFT_CURLY_BRACE, false) {
+            let mut min = 0;
+            let mut max = -1;
+            if self.regexp_eat_decimal_digits(state) {
+                min = state.last_int_value;
+                if state.eat(COMMA, false) && self.regexp_eat_decimal_digits(state) {
+                    max = state.last_int_value;
+                }
+                if state.eat(RIGHT_CURLY_BRACE, false) {
+                    // SyntaxError in https://www.ecma-international.org/ecma-262/8.0/#sec-term
+                    if max != -1 && max < min && !no_error {
+                        state.raise("numbers out of order in {} quantifier")?;
+                    }
+                    return Ok(true);
+                }
+            }
+            if state.switch_u && !no_error {
+                state.raise("Incomplete quantifier")?;
+            }
+            state.pos = start
+        }
+        Ok(false)
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-InvalidBracedQuantifier
+    fn regexp_eat_invalid_braced_quantifier(
+        &self,
+        state: &mut RegExpValidationState,
+    ) -> Result<bool, ParserError> {
+        if self.regexp_eat_braced_quantifier(state, true)? {
+            state.raise("Nothing to repeat")?;
+        }
+        Ok(false)
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-ExtendedPatternCharacter
+    fn regexp_eat_extended_pattern_character(&self, state: &mut RegExpValidationState) -> bool {
+        let code = state.current(false);
+        if code != -1
+            && code != DOLLAR_SIGN
+            && !(code >= LEFT_PARENTHESIS && code <= PLUS_SIGN)
+            && code != DOT
+            && code != QUESTION_MARK
+            && code != LEFT_SQUARE_BRACKET
+            && code != CARET
+            && code != VERTICAL_BAR
+        {
+            state.advance(false);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-Atom
+    fn regexp_eat_atom(&self, state: &mut RegExpValidationState) -> Result<bool, ParserError> {
+        Ok(self.regexp_eat_pattern_characters(state)
+            || state.eat(DOT, false)
+            || self.regexp_eat_reverse_solidus_atom_escape(state)?
+            || self.regexp_eat_character_class(state)?
+            || self.regexp_eat_uncapturing_group(state)?
+            || self.regexp_eat_capturing_group(state)?)
+    }
+
     /// https://www.ecma-international.org/ecma-262/8.0/#prod-annexB-ExtendedAtom
     fn regexp_eat_extended_atom(
         &self,
         state: &mut RegExpValidationState,
     ) -> Result<bool, ParserError> {
-        Ok(false)
+        Ok(state.eat(DOT, false)
+            || self.regexp_eat_reverse_solidus_atom_escape(state)?
+            || self.regexp_eat_character_class(state)?
+            || self.regexp_eat_uncapturing_group(state)?
+            || self.regexp_eat_capturing_group(state)?
+            || self.regexp_eat_invalid_braced_quantifier(state)?
+            || self.regexp_eat_extended_pattern_character(state))
     }
 
     /// https://www.ecma-international.org/ecma-262/8.0/#prod-PatternCharacter
@@ -968,7 +1296,7 @@ impl RegexpParser for Parser {
             // Handle `QuantifiableAssertion Quantifier` alternative.
             // `state.last_assertion_is_quantifiable` is true if the last eaten Assertion
             // is a QuantifiableAssertion.
-            if state.last_assertion_is_quantifiable && self.regexp_eat_quantifier(state, false) {
+            if state.last_assertion_is_quantifiable && self.regexp_eat_quantifier(state, false)? {
                 if state.switch_u {
                     state.raise("Invalid quantifier")?;
                 }
@@ -976,12 +1304,12 @@ impl RegexpParser for Parser {
             return Ok(true);
         }
         let status = if state.switch_u {
-            self.regexp_eat_term(state)?
+            self.regexp_eat_atom(state)?
         } else {
             self.regexp_eat_extended_atom(state)?
         };
         if status {
-            self.regexp_eat_quantifier(state, false);
+            self.regexp_eat_quantifier(state, false)?;
         }
         Ok(status)
     }
@@ -993,9 +1321,30 @@ impl RegexpParser for Parser {
         Ok(())
     }
 
+    /// https://www.ecma-international.org/ecma-262/8.0/#prod-QuantifierPrefix
+    fn regexp_eat_quantifier_prefix(
+        &self,
+        state: &mut RegExpValidationState,
+        no_error: bool,
+    ) -> Result<bool, ParserError> {
+        Ok(state.eat(ASTERISK, false)
+            || state.eat(PLUS_SIGN, false)
+            || state.eat(QUESTION_MARK, false)
+            || self.regexp_eat_braced_quantifier(state, no_error)?)
+    }
+
     /// https://www.ecma-international.org/ecma-262/8.0/#prod-Quantifier
-    fn regexp_eat_quantifier(&self, state: &mut RegExpValidationState, no_error: bool) -> bool {
-        true
+    fn regexp_eat_quantifier(
+        &self,
+        state: &mut RegExpValidationState,
+        no_error: bool,
+    ) -> Result<bool, ParserError> {
+        if self.regexp_eat_quantifier_prefix(state, no_error)? {
+            state.eat(QUESTION_MARK, false);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     /// https://www.ecma-international.org/ecma-262/8.0/#prod-Disjunction
@@ -1004,7 +1353,7 @@ impl RegexpParser for Parser {
         while state.eat(VERTICAL_BAR, false) {
             self.regexp_alternative(state)?;
         }
-        if self.regexp_eat_quantifier(state, true) {
+        if self.regexp_eat_quantifier(state, true)? {
             state.raise("Nothing to repeat")?;
         }
         if state.eat(LEFT_CURLY_BRACE, false) {

@@ -1,4 +1,4 @@
-pub(crate) const BACK_SPACE: i32 = 0x08;
+pub(crate) const BACK_SPACE: i32 = 0x08; // '<BS>'
 pub(crate) const TAB: i32 = 0x09; //  '\t'
 pub(crate) const LINE_FEED: i32 = 0x0a; //  '\n'
 pub(crate) const VERTICAL_TAB: i32 = 0x0b; // '\v'
