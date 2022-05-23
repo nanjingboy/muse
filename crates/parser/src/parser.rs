@@ -22,9 +22,8 @@ use crate::{
 
 const BASE_KEYWORDS: &str = "break|case|catch|continue|debugger|default|do|else|finally|for|function|if|return|switch|throw|try|var|while|with|null|true|false|instanceof|typeof|void|delete|new|in|this";
 
-fn get_keywords(version: &EcmaVersion, source_type: &SourceType) -> String {
-    let version_number: i32 = version.clone().try_into().unwrap();
-    if version_number >= 6 {
+fn get_keywords(ecma_version: i32, source_type: &SourceType) -> String {
+    if ecma_version >= 6 {
         format!("{:}|const|class|extends|export|import|super", BASE_KEYWORDS)
     } else if *source_type == SourceType::Module {
         format!("{:}|export|import", BASE_KEYWORDS)
@@ -130,7 +129,7 @@ impl Parser {
             },
             source_file: options.source_file.clone(),
             keywords_regex: get_regex_from_words(&get_keywords(
-                &options.ecma_version,
+                options.get_ecma_version_number(),
                 &options.source_type,
             )),
             reserved_words_regex: get_regex_from_words(&reserved_words),

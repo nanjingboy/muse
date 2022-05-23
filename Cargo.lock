@@ -27,12 +27,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
 
 [[package]]
-name = "convert_case"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb4a24b1aaf0fd0ce8b45161144d6f42cd91677fd5940fd431183eb023b3a2b8"
-
-[[package]]
 name = "fancy-regex"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -61,22 +55,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 
 [[package]]
-name = "muse-macros"
-version = "0.1.0"
-dependencies = [
- "convert_case",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "muse-parser"
 version = "0.1.0"
 dependencies = [
  "fancy-regex",
  "lazy_static",
- "muse-macros",
  "serde",
  "serde_json",
  "thiserror",

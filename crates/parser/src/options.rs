@@ -1,9 +1,8 @@
-use muse_macros::{IntEnum, StrEnum};
 use serde::{Deserialize, Serialize};
 
 use crate::node::Node;
 
-#[derive(Debug, Clone, Eq, PartialEq, StrEnum, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SourceType {
     Script,
     Module,
@@ -15,8 +14,7 @@ impl Default for SourceType {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, IntEnum, Serialize, Deserialize)]
-#[int_enum(i32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum EcmaVersion {
     Ecma3 = 3,
     Ecma5 = 5,
@@ -58,6 +56,6 @@ pub struct Options {
 
 impl Options {
     pub fn get_ecma_version_number(&self) -> i32 {
-        self.ecma_version.try_into().unwrap()
+        self.ecma_version as i32
     }
 }

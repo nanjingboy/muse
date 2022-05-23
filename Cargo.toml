@@ -3,4 +3,4 @@ panic = "abort"
 lto = true
 
 [workspace]
-members = ["./crates/parser", "./crates/macros"]
+members = ["./crates/parser"]
