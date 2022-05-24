@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TokenType {
     #[serde(default)]
     pub label: String,

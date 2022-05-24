@@ -5,20 +5,29 @@ use crate::{
     parser::Parser,
 };
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum NodeType {
+    Null,
+    ParenthesizedExpression,
+    Identifier,
+    MemberExpression,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
-    pub node_type: String,
+    pub node_type: NodeType,
     pub start: i32,
     pub end: i32,
     pub loc: Option<SourceLocation>,
     pub source_file: Option<String>,
     pub range: Option<(i32, i32)>,
+    pub expression: Option<Box<Node>>,
 }
 
 impl Node {
     pub fn new(parser: &Parser, pos: i32, loc: &Option<Position>) -> Self {
         Node {
-            node_type: "".to_string(),
+            node_type: NodeType::Null,
             start: pos,
             end: 0,
             loc: if parser.options.locations {
@@ -36,6 +45,7 @@ impl Node {
             } else {
                 None
             },
+            expression: None,
         }
     }
 }
@@ -43,8 +53,14 @@ impl Node {
 pub trait NodeParser {
     fn start_node(&self) -> Node;
     fn start_node_at(&self, pos: i32, loc: &Option<Position>) -> Node;
-    fn finish_node(&self, node: &mut Node, node_type: &str);
-    fn finish_node_at(&self, node: &mut Node, node_type: &str, pos: i32, loc: &Option<Position>);
+    fn finish_node(&self, node: &mut Node, node_type: &NodeType);
+    fn finish_node_at(
+        &self,
+        node: &mut Node,
+        node_type: &NodeType,
+        pos: i32,
+        loc: &Option<Position>,
+    );
 }
 
 impl NodeParser for Parser {
@@ -59,7 +75,7 @@ impl NodeParser for Parser {
         Node::new(self, pos, loc)
     }
 
-    fn finish_node(&self, node: &mut Node, node_type: &str) {
+    fn finish_node(&self, node: &mut Node, node_type: &NodeType) {
         self.finish_node_at(
             node,
             node_type,
@@ -68,8 +84,14 @@ impl NodeParser for Parser {
         );
     }
 
-    fn finish_node_at(&self, node: &mut Node, node_type: &str, pos: i32, loc: &Option<Position>) {
-        node.node_type = node_type.to_owned();
+    fn finish_node_at(
+        &self,
+        node: &mut Node,
+        node_type: &NodeType,
+        pos: i32,
+        loc: &Option<Position>,
+    ) {
+        node.node_type = node_type.clone();
         node.end = pos;
         if self.options.locations {
             if let Some(loc) = loc {

@@ -82,7 +82,7 @@ impl RegExpValidationState {
 
     pub fn raise(&self, message: &str) -> Result<(), ParserError> {
         match self.parser.upgrade() {
-            Some(parser) => parser.raise_syntax_error(
+            Some(parser) => parser.raise_recoverable(
                 self.start,
                 &format!(
                     "Invalid regular expression: /{:}/: {:}",
@@ -385,11 +385,11 @@ impl RegexpParser for Parser {
         let flags = &state.flags;
         for (index, flag) in flags.chars().enumerate() {
             if !valid_flags.contains(flag) {
-                return self.raise_syntax_error(state.start, "Invalid regular expression flag");
+                return self.raise_recoverable(state.start, "Invalid regular expression flag");
             }
             let flags = &flags[index + 1..];
             if flags.contains(flag) {
-                return self.raise_syntax_error(state.start, "Duplicate regular expression flag");
+                return self.raise_recoverable(state.start, "Duplicate regular expression flag");
             }
         }
         Ok(())

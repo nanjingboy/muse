@@ -175,7 +175,7 @@ impl ScopeParser for Parser {
             }
         };
         if redeclared {
-            self.raise_syntax_error(
+            self.raise_recoverable(
                 pos,
                 &format!("Identifier '{:}' has already been declared", name),
             )

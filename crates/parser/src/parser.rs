@@ -7,6 +7,7 @@ use std::{
 use fancy_regex::Regex;
 
 use crate::{
+    errors::ParserError,
     location::{LocationParser, Position},
     node::Node,
     options::{EcmaVersion, Options, SourceType},
@@ -17,7 +18,7 @@ use crate::{
         types::{get_token_types, TokenType},
         TokenValue,
     },
-    utils::get_regex_from_words,
+    utils::{get_regex_from_words, UtilsParser},
 };
 
 const BASE_KEYWORDS: &str = "break|case|catch|continue|debugger|default|do|else|finally|for|function|if|return|switch|throw|try|var|while|with|null|true|false|instanceof|typeof|void|delete|new|in|this";
@@ -75,8 +76,8 @@ pub struct Parser {
     pub is_strict: Cell<bool>,
     pub potential_arrow_at: Cell<i32>,
     pub is_potential_arrow_in_for_await: Cell<bool>,
-    pub yield_pos: Cell<i32>,
-    pub await_pos: Cell<i32>,
+    pub yield_pos: Cell<Option<i32>>,
+    pub await_pos: Cell<Option<i32>>,
     pub await_ident_pos: Cell<i32>,
     pub labels: RefCell<Vec<String>>,
     pub undefined_exports: RefCell<HashMap<String, Position>>,
@@ -86,7 +87,11 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(options: &Options, input: &str, start_pos: &Option<i32>) -> Rc<Parser> {
+    pub fn new(
+        options: &Options,
+        input: &str,
+        start_pos: &Option<i32>,
+    ) -> Result<Rc<Parser>, ParserError> {
         let allow_reserved = match options.allow_reserved {
             Some(v) => v,
             None => options.get_ecma_version_number() < 5,
@@ -159,8 +164,8 @@ impl Parser {
             is_strict: Cell::from(false),
             potential_arrow_at: Cell::from(-1),
             is_potential_arrow_in_for_await: Cell::from(false),
-            yield_pos: Cell::from(0),
-            await_pos: Cell::from(0),
+            yield_pos: Cell::from(None),
+            await_pos: Cell::from(None),
             await_ident_pos: Cell::from(0),
             labels: RefCell::from(vec![]),
             undefined_exports: RefCell::from(HashMap::new()),
@@ -174,6 +179,11 @@ impl Parser {
         *parser.regexp_state.borrow_mut() =
             Some(RegExpValidationState::new(Rc::downgrade(&parser)));
         parser.enter_scope(SCOPE_TOP);
-        parser
+        parser.is_strict.set(if parser.is_in_module {
+            true
+        } else {
+            parser.strict_directive(parser.cur_token_pos.get())?
+        });
+        Ok(parser)
     }
 }

@@ -4,6 +4,9 @@ use crate::location::Position;
 
 #[derive(Error, Debug)]
 pub enum ParserError {
+    #[error("fancy_regex::Error")]
+    FancyRegexError(#[from] fancy_regex::Error),
+
     #[error("{message:?}")]
     SyntaxError {
         message: String,
