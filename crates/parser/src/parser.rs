@@ -19,6 +19,7 @@ use crate::{
         TokenValue,
     },
     utils::{get_regex_from_words, UtilsParser},
+    whitespace::get_line_break_regex,
 };
 
 const BASE_KEYWORDS: &str = "break|case|catch|continue|debugger|default|do|else|finally|for|function|if|return|switch|throw|try|var|while|with|null|true|false|instanceof|typeof|void|delete|new|in|this";
@@ -116,8 +117,10 @@ impl Parser {
                     .rfind("\n")
                     .map(|v| v + 1)
                     .unwrap_or(0);
-                let reg = Regex::new(r"\r\n?|\n|\u2028|\u2029").unwrap();
-                let cur_token_line = reg.find_iter(&input[0..cur_token_line_start]).count() + 1;
+                let cur_token_line = get_line_break_regex()
+                    .find_iter(&input[0..cur_token_line_start])
+                    .count()
+                    + 1;
                 (
                     cur_token_pos,
                     cur_token_line_start as i32,
