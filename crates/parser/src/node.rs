@@ -7,27 +7,50 @@ use crate::{
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum NodeType {
-    Null,
-    ParenthesizedExpression,
+    ArrayExpression,
+    ArrayPattern,
+    AssignmentExpression,
+    AssignmentPattern,
+    ChainExpression,
     Identifier,
     MemberExpression,
+    Null,
+    ObjectExpression,
+    ObjectPattern,
+    ParenthesizedExpression,
+    Property,
+    RestElement,
+    SpreadElement,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
+    pub name: String,
     pub node_type: NodeType,
+    pub operator: String,
+    pub kind: String,
     pub start: i32,
     pub end: i32,
     pub loc: Option<SourceLocation>,
     pub source_file: Option<String>,
     pub range: Option<(i32, i32)>,
-    pub expression: Option<Box<Node>>,
+    pub left: Box<Option<Node>>,
+    pub right: Box<Option<Node>>,
+    pub key: Box<Option<Node>>,
+    pub value: Box<Option<Node>>,
+    pub argument: Box<Option<Node>>,
+    pub expression: Box<Option<Node>>,
+    pub elements: Box<Vec<Node>>,
+    pub properties: Box<Vec<Node>>,
 }
 
 impl Node {
     pub fn new(parser: &Parser, pos: i32, loc: &Option<Position>) -> Self {
         Node {
+            name: "".to_string(),
             node_type: NodeType::Null,
+            operator: "".to_string(),
+            kind: "".to_string(),
             start: pos,
             end: 0,
             loc: if parser.options.locations {
@@ -45,7 +68,14 @@ impl Node {
             } else {
                 None
             },
-            expression: None,
+            left: Box::new(None),
+            right: Box::new(None),
+            key: Box::new(None),
+            value: Box::new(None),
+            argument: Box::new(None),
+            expression: Box::new(None),
+            elements: Box::new(vec![]),
+            properties: Box::new(vec![]),
         }
     }
 }

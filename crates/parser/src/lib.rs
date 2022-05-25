@@ -2,6 +2,7 @@ mod char_codes;
 mod errors;
 mod identifier;
 mod location;
+mod lval;
 mod node;
 mod options;
 mod parser;

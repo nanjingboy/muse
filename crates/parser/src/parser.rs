@@ -12,7 +12,7 @@ use crate::{
     node::Node,
     options::{EcmaVersion, Options, SourceType},
     regexp::RegExpValidationState,
-    scope::{Scope, ScopeParser, SCOPE_TOP},
+    scope::{Scope, ScopeParser, SCOPE_ASYNC, SCOPE_TOP},
     token::{
         context::{get_initial_context, TokenContext},
         types::{get_token_types, TokenType},
@@ -185,5 +185,12 @@ impl Parser {
             parser.strict_directive(parser.cur_token_pos.get())?
         });
         Ok(parser)
+    }
+
+    pub fn is_async(&self) -> bool {
+        match self.current_var_scope() {
+            Some(scope) => (scope.flags & SCOPE_ASYNC > 0) && !scope.in_class_field_init,
+            None => false,
+        }
     }
 }

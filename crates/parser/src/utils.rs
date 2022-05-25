@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use fancy_regex::Regex;
 
 use crate::{
@@ -92,12 +94,12 @@ pub trait UtilsParser {
     fn unexpected(&self, pos: Option<i32>) -> Result<(), ParserError>;
     fn check_pattern_errors(
         &self,
-        destructuring_errors: Option<&DestructuringErrors>,
+        destructuring_errors: &Option<DestructuringErrors>,
         is_assign: bool,
     ) -> Result<(), ParserError>;
     fn check_expression_errors(
         &self,
-        destructuring_errors: Option<&DestructuringErrors>,
+        destructuring_errors: &Option<DestructuringErrors>,
         and_throw: bool,
     ) -> Result<bool, ParserError>;
     fn check_yield_await_in_default_params(&self) -> Result<(), ParserError>;
@@ -243,7 +245,7 @@ impl UtilsParser for Parser {
 
     fn check_pattern_errors(
         &self,
-        destructuring_errors: Option<&DestructuringErrors>,
+        destructuring_errors: &Option<DestructuringErrors>,
         is_assign: bool,
     ) -> Result<(), ParserError> {
         match destructuring_errors {
@@ -272,7 +274,7 @@ impl UtilsParser for Parser {
 
     fn check_expression_errors(
         &self,
-        destructuring_errors: Option<&DestructuringErrors>,
+        destructuring_errors: &Option<DestructuringErrors>,
         and_throw: bool,
     ) -> Result<bool, ParserError> {
         match destructuring_errors {
@@ -317,8 +319,8 @@ impl UtilsParser for Parser {
 
     fn is_simple_assign_target(&self, node: &Node) -> bool {
         if node.node_type == NodeType::ParenthesizedExpression {
-            match node.expression {
-                Some(ref v) => self.is_simple_assign_target(v),
+            match node.expression.borrow() {
+                Some(v) => self.is_simple_assign_target(v),
                 None => false,
             }
         } else {
