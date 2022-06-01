@@ -83,11 +83,11 @@ impl Node {
 pub trait NodeParser {
     fn start_node(&self) -> Node;
     fn start_node_at(&self, pos: i32, loc: &Option<Position>) -> Node;
-    fn finish_node(&self, node: &mut Node, node_type: &NodeType);
+    fn finish_node(&self, node: &mut Node, node_type: NodeType);
     fn finish_node_at(
         &self,
         node: &mut Node,
-        node_type: &NodeType,
+        node_type: NodeType,
         pos: i32,
         loc: &Option<Position>,
     );
@@ -105,7 +105,7 @@ impl NodeParser for Parser {
         Node::new(self, pos, loc)
     }
 
-    fn finish_node(&self, node: &mut Node, node_type: &NodeType) {
+    fn finish_node(&self, node: &mut Node, node_type: NodeType) {
         self.finish_node_at(
             node,
             node_type,
@@ -117,7 +117,7 @@ impl NodeParser for Parser {
     fn finish_node_at(
         &self,
         node: &mut Node,
-        node_type: &NodeType,
+        node_type: NodeType,
         pos: i32,
         loc: &Option<Position>,
     ) {

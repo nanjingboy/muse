@@ -1,5 +1,6 @@
 mod char_codes;
 mod errors;
+mod expression;
 mod identifier;
 mod location;
 mod lval;
