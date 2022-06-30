@@ -125,9 +125,9 @@ impl UtilsParser for Parser {
         loop {
             start += get_first_white_space(&input[start..])?.len();
             if let Some(captures) = literal_regex.captures(&input[start..])? {
-                let mut match_one = captures.get(0).map_or("", |m| m.as_str());
-                let mut match_two = captures.get(1).map_or("", |m| m.as_str());
-                let mut match_three = captures.get(2).map_or("", |m| m.as_str());
+                let match_one = captures.get(0).map_or("", |m| m.as_str());
+                let match_two = captures.get(1).map_or("", |m| m.as_str());
+                let match_three = captures.get(2).map_or("", |m| m.as_str());
                 if match_two.eq("use strict") || match_three.eq("use strict") {
                     let skip_white_space_last_index = start + match_one.len();
                     let space_after = get_first_white_space(&input[skip_white_space_last_index..])?;
