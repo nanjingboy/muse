@@ -62,9 +62,7 @@ impl RegExpValidationState {
             back_reference_names: vec![],
         }
     }
-}
 
-impl RegExpValidationState {
     pub fn reset(&mut self, start: i32, pattern: &str, flags: &str) {
         self.start = start;
         self.source = pattern.to_owned();
